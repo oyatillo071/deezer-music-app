@@ -1,5 +1,7 @@
 "use client";
 
+import type React from "react";
+
 import { type Song, usePlayerStore } from "@/store/player-store";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,7 +14,7 @@ import {
 import { formatDuration } from "@/lib/utils";
 import { Play, MoreHorizontal, Heart, Pause } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface SongCardProps {
   song: Song;
@@ -20,6 +22,7 @@ interface SongCardProps {
 }
 
 export function SongCard({ song, variant = "default" }: SongCardProps) {
+  const router = useRouter();
   const {
     currentSong,
     isPlaying,
@@ -35,7 +38,8 @@ export function SongCard({ song, variant = "default" }: SongCardProps) {
   const isActive = currentSong?.id === song.id;
   const isFavorite = favorites.some((s) => s.id === song.id);
 
-  const handlePlay = () => {
+  const handlePlay = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent navigation when clicking play button
     if (isActive) {
       togglePlay();
     } else {
@@ -43,12 +47,22 @@ export function SongCard({ song, variant = "default" }: SongCardProps) {
     }
   };
 
+  const handleCardClick = () => {
+    router.push(`/song/${song.id}`);
+  };
+
+  const handleArtistClick = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card navigation
+    router.push(`/artist/${song.artistId}`);
+  };
+
   if (variant === "row") {
     return (
       <div
         className={`flex items-center p-2 rounded-md hover:bg-ocean-lightest/50 dark:hover:bg-ocean-dark/30 group ${
           isActive ? "bg-ocean-lightest dark:bg-ocean-dark/20" : ""
-        } w-full min-w-0`}
+        } w-full min-w-0 cursor-pointer`}
+        onClick={handleCardClick}
       >
         <div className="relative h-10 w-10 mr-3 flex-shrink-0 rounded-md overflow-hidden">
           <Image
@@ -72,18 +86,13 @@ export function SongCard({ song, variant = "default" }: SongCardProps) {
         </div>
 
         <div className="flex-1 min-w-0 overflow-hidden">
-          <Link
-            href={`/song/${song.id}`}
-            className="text-sm font-medium hover:underline truncate block"
-          >
-            {song.title}
-          </Link>
-          <Link
-            href={`/artist/${song.artistId}`}
+          <div className="font-medium truncate">{song.title}</div>
+          <div
             className="text-xs text-muted-foreground hover:underline truncate block"
+            onClick={handleArtistClick}
           >
             {song.artist}
-          </Link>
+          </div>
         </div>
 
         <div className="text-xs text-muted-foreground mr-2 whitespace-nowrap hidden sm:block">
@@ -96,11 +105,12 @@ export function SongCard({ song, variant = "default" }: SongCardProps) {
               variant="ghost"
               size="icon"
               className="h-8 w-8 text-ocean-dark dark:text-ocean-light flex-shrink-0"
+              onClick={(e) => e.stopPropagation()} // Prevent card navigation
             >
               <MoreHorizontal className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
             <DropdownMenuItem onClick={() => addToQueue(song)}>
               Add to Queue
             </DropdownMenuItem>
@@ -125,7 +135,10 @@ export function SongCard({ song, variant = "default" }: SongCardProps) {
 
   if (variant === "compact") {
     return (
-      <div className="group relative card-hover-effect">
+      <div
+        className="group relative card-hover-effect cursor-pointer"
+        onClick={handleCardClick}
+      >
         <div className="relative aspect-square overflow-hidden rounded-md shadow-md">
           <Image
             src={song.cover || "/placeholder.svg?height=200&width=200"}
@@ -151,25 +164,25 @@ export function SongCard({ song, variant = "default" }: SongCardProps) {
           </div>
         </div>
         <div className="mt-2">
-          <Link
-            href={`/song/${song.id}`}
-            className="text-sm font-medium hover:underline truncate block"
-          >
+          <div className="text-sm font-medium hover:underline truncate block">
             {song.title}
-          </Link>
-          <Link
-            href={`/artist/${song.artistId}`}
+          </div>
+          <div
             className="text-xs text-muted-foreground hover:underline truncate block"
+            onClick={handleArtistClick}
           >
             {song.artist}
-          </Link>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <Card className="overflow-hidden group card-hover-effect border-ocean-lightest dark:border-ocean-dark/40">
+    <Card
+      className="overflow-hidden group card-hover-effect border-ocean-lightest dark:border-ocean-dark/40 cursor-pointer"
+      onClick={handleCardClick}
+    >
       <CardContent className="p-0">
         <div className="relative aspect-square overflow-hidden">
           <Image
@@ -198,7 +211,10 @@ export function SongCard({ song, variant = "default" }: SongCardProps) {
             variant="ghost"
             size="icon"
             className="absolute top-2 right-2 h-8 w-8 bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={() => toggleFavorite(song)}
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleFavorite(song);
+            }}
           >
             <Heart
               className={`h-4 w-4 ${
@@ -208,18 +224,15 @@ export function SongCard({ song, variant = "default" }: SongCardProps) {
           </Button>
         </div>
         <div className="p-3">
-          <Link
-            href={`/song/${song.id}`}
-            className="font-medium hover:underline truncate block"
-          >
+          <div className="font-medium hover:underline truncate block">
             {song.title}
-          </Link>
-          <Link
-            href={`/artist/${song.artistId}`}
+          </div>
+          <div
             className="text-sm text-muted-foreground hover:underline truncate block mt-1"
+            onClick={handleArtistClick}
           >
             {song.artist}
-          </Link>
+          </div>
         </div>
       </CardContent>
     </Card>

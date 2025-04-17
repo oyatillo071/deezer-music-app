@@ -208,3 +208,23 @@
 .wave-bar:nth-child(4n) {
   animation-delay: 0.9s;
 }
+
+/* Typing animation for welcome loader */
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.animate-blink {
+  animation: blink 1s step-end infinite;
+}
+
+/* Alert variants */
+.alert-success {
+  @apply bg-green-100 dark:bg-green-900/30 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200;
+}

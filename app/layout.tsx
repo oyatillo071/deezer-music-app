@@ -2,11 +2,12 @@ import type React from "react";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "@/components/theme-provider";
 import { Header } from "@/components/header";
 import { Sidebar } from "@/components/sidebar";
 import { MusicPlayer } from "@/components/music-player";
 import { ApiKeyModal } from "@/components/api-key-modal";
+import { Providers } from "./provider";
+import { WelcomeLoader } from "@/components/welcome-loader";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -23,12 +24,8 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
+        <Providers>
+          <WelcomeLoader />
           <ApiKeyModal />
           <div className="relative min-h-screen">
             <Header />
@@ -43,10 +40,8 @@ export default function RootLayout({
             <div className="pb-24">{/* Space for the music player */}</div>
             <MusicPlayer />
           </div>
-        </ThemeProvider>
+        </Providers>
       </body>
     </html>
   );
 }
-
-import "./globals.css";

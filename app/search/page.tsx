@@ -2,8 +2,8 @@
 
 import type React from "react";
 
-import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SongCard } from "@/components/song-card";
 import { AlbumCard } from "@/components/album-card";
@@ -11,152 +11,103 @@ import { ArtistCard } from "@/components/artist-card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  searchMusic,
-  getRandomTracks,
-  getRandomAlbums,
-  getRandomArtists,
-} from "@/lib/music-api";
-import type { Song } from "@/store/player-store";
 import { SearchIcon } from "lucide-react";
+import { searchMusic } from "@/lib/music-api";
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const query = searchParams.get("q") || "";
 
   const [searchQuery, setSearchQuery] = useState(query);
-  const [songs, setSongs] = useState<Song[]>([]);
+  const [activeTab, setActiveTab] = useState("songs");
+
+  const [songs, setSongs] = useState<any[]>([]);
   const [albums, setAlbums] = useState<any[]>([]);
   const [artists, setArtists] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState("songs");
-  const [searchError, setSearchError] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
+  // Perform search when query changes
   useEffect(() => {
-    if (query) {
-      setSearchQuery(query);
-      performSearch(query);
-    }
-  }, [query]);
+    const performSearch = async () => {
+      if (!query) return;
 
-  const performSearch = async (searchTerm: string) => {
-    if (!searchTerm.trim()) return;
-
-    try {
       setLoading(true);
-      setSearchError("");
+      setError(null);
 
-      // Search songs
       try {
-        const songsData = await searchMusic(searchTerm, "track");
-        const formattedSongs = Array.isArray(songsData)
-          ? songsData.slice(0, 12).map((song) => ({
-              id: song.id || `song-${Math.random()}`,
-              title: song.title || "Unknown Song",
-              artist: song.artist?.name || "Unknown Artist",
-              artistId: song.artist?.id || "unknown",
-              album: song.album?.title || "Unknown Album",
-              albumId: song.album?.id || "unknown",
-              duration: song.duration || 30,
+        // Search for tracks
+        const tracksData = await searchMusic(query, "track");
+        const formattedSongs = Array.isArray(tracksData)
+          ? tracksData.slice(0, 12).map((track: any) => ({
+              id: track.id || `song-${Math.random()}`,
+              title: track.title || "Unknown Song",
+              artist: track.artist?.name || "Unknown Artist",
+              artistId: track.artist?.id || "unknown",
+              album: track.album?.title || "Unknown Album",
+              albumId: track.album?.id || "unknown",
+              duration: track.duration || 30,
               cover:
-                song.album?.cover_medium ||
+                track.album?.cover_medium ||
                 "/placeholder.svg?height=300&width=300",
               audioUrl:
-                song.preview ||
+                track.preview ||
                 "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
             }))
           : [];
-
         setSongs(formattedSongs);
-      } catch (error) {
-        console.error("Error searching songs:", error);
-        const randomTracks = await getRandomTracks(6);
-        const formattedRandomSongs = randomTracks.map((track) => ({
-          id: track.id || `song-${Math.random()}`,
-          title: track.title || "Unknown Song",
-          artist: track.artist?.name || "Unknown Artist",
-          artistId: track.artist?.id || "unknown",
-          album: track.album?.title || "Unknown Album",
-          albumId: track.album?.id || "unknown",
-          duration: track.duration || 30,
-          cover:
-            track.album?.cover_medium ||
-            "/placeholder.svg?height=300&width=300",
-          audioUrl:
-            track.preview ||
-            "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-        }));
-        setSongs(formattedRandomSongs);
-        setSearchError(
-          "Couldn't find songs matching your search. Showing random songs instead."
-        );
-      }
 
-      // Search albums
-      try {
-        const albumsData = await searchMusic(searchTerm, "album");
-        setAlbums(
-          Array.isArray(albumsData)
-            ? albumsData.slice(0, 12).map((album) => ({
-                id: album.id || `album-${Math.random()}`,
-                title: album.title || "Unknown Album",
-                artist: album.artist?.name || "Unknown Artist",
-                artistId: album.artist?.id || "unknown",
-                cover:
-                  album.cover_medium || "/placeholder.svg?height=300&width=300",
-              }))
-            : []
-        );
-      } catch (error) {
-        console.error("Error searching albums:", error);
-        const randomAlbums = await getRandomAlbums(6);
-        const formattedRandomAlbums = randomAlbums.map((album) => ({
-          id: album.id || `album-${Math.random()}`,
-          title: album.title || "Unknown Album",
-          artist: album.artist?.name || "Unknown Artist",
-          artistId: album.artist?.id || "unknown",
-          cover: album.cover_medium || "/placeholder.svg?height=300&width=300",
-        }));
-        setAlbums(formattedRandomAlbums);
-      }
+        // Search for albums
+        const albumsData = await searchMusic(query, "album");
+        const uniqueAlbums = new Map();
+        if (Array.isArray(albumsData)) {
+          albumsData.forEach((item: any) => {
+            if (item.album && !uniqueAlbums.has(item.album.id)) {
+              uniqueAlbums.set(item.album.id, {
+                id: item.album.id,
+                title: item.album.title,
+                artist: item.artist.name,
+                artistId: item.artist.id,
+                cover: item.album.cover_medium,
+              });
+            }
+          });
+        }
+        setAlbums(Array.from(uniqueAlbums.values()).slice(0, 12));
 
-      // Search artists
-      try {
-        const artistsData = await searchMusic(searchTerm, "artist");
-        setArtists(
-          Array.isArray(artistsData)
-            ? artistsData.slice(0, 12).map((artist) => ({
-                id: artist.id || `artist-${Math.random()}`,
-                name: artist.name || "Unknown Artist",
+        // Search for artists
+        const artistsData = await searchMusic(query, "artist");
+        const uniqueArtists = new Map();
+        if (Array.isArray(artistsData)) {
+          artistsData.forEach((item: any) => {
+            if (item.artist && !uniqueArtists.has(item.artist.id)) {
+              uniqueArtists.set(item.artist.id, {
+                id: item.artist.id,
+                name: item.artist.name,
                 image:
-                  artist.picture_medium ||
+                  item.artist.picture_medium ||
                   "/placeholder.svg?height=300&width=300",
-              }))
-            : []
-        );
+              });
+            }
+          });
+        }
+        setArtists(Array.from(uniqueArtists.values()).slice(0, 12));
       } catch (error) {
-        console.error("Error searching artists:", error);
-        const randomArtists = await getRandomArtists(6);
-        const formattedRandomArtists = randomArtists.map((artist) => ({
-          id: artist.id || `artist-${Math.random()}`,
-          name: artist.name || "Unknown Artist",
-          image:
-            artist.picture_medium || "/placeholder.svg?height=300&width=300",
-        }));
-        setArtists(formattedRandomArtists);
+        console.error("Error searching:", error);
+        setError("There was an error with your search. Please try again.");
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("Error searching:", error);
-      setSearchError("An error occurred while searching. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    performSearch();
+  }, [query]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      performSearch(searchQuery);
+      router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
     }
   };
 
@@ -183,9 +134,9 @@ export default function SearchPage() {
         <>
           <h1 className="text-2xl font-bold">Search results for "{query}"</h1>
 
-          {searchError && (
+          {error && (
             <div className="bg-ocean-light/10 border border-ocean-light/20 p-4 rounded-md text-ocean-dark dark:text-ocean-light mb-4">
-              {searchError}
+              {error}
             </div>
           )}
 

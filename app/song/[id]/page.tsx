@@ -1,16 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { SongCard } from "@/components/song-card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { getTrack, searchMusic, getArtistTopTracks } from "@/lib/music-api";
 import { type Song, usePlayerStore } from "@/store/player-store";
 import { formatDuration } from "@/lib/utils";
-import { Play, Pause, Heart, Share2, Plus } from "lucide-react";
+import { Play, Pause, Heart, Share2, Plus, ChevronRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { useState, useEffect } from "react";
+import { getTrack, searchMusic } from "@/lib/music-api";
 
 export default function SongDetailPage() {
   const params = useParams();
@@ -31,75 +31,99 @@ export default function SongDetailPage() {
     addToQueue,
   } = usePlayerStore();
 
-  const isCurrentSong = currentSong?.id === songId;
-  const isFavorite = song ? favorites.some((s) => s.id === song.id) : false;
-
   useEffect(() => {
     const fetchSongDetails = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // Get track details from API
-        const songData = await getTrack(songId);
+        // Try to get from localStorage first
+        const storageKey = `music_song_${songId}`;
+        const storedData = localStorage.getItem(storageKey);
 
-        if (!songData) {
-          setError("Failed to load song data");
-          return;
+        if (storedData) {
+          try {
+            const { data, expiry } = JSON.parse(storedData);
+            const now = new Date().getTime();
+
+            if (now < expiry) {
+              setSong(data.song);
+              setRelatedSongs(data.relatedSongs);
+              setLoading(false);
+              return;
+            }
+          } catch (e) {
+            console.error("Error parsing stored song data:", e);
+          }
+        }
+
+        // Fetch from API if not in storage
+        const trackData = await getTrack(songId);
+
+        if (!trackData) {
+          throw new Error("Song not found");
         }
 
         // Format the song data
         const formattedSong: Song = {
-          id: songData.id?.toString() || songId,
-          title: songData.title || "Unknown Song",
-          artist: songData.artist?.name || "Unknown Artist",
-          artistId: songData.artist?.id?.toString() || "unknown",
-          album: songData.album?.title || "Unknown Album",
-          albumId: songData.album?.id?.toString() || "unknown",
-          duration: songData.duration || 180,
+          id: trackData.id,
+          title: trackData.title,
+          artist: trackData.artist?.name || "Unknown Artist",
+          artistId: trackData.artist?.id || "unknown",
+          album: trackData.album?.title || "Unknown Album",
+          albumId: trackData.album?.id || "unknown",
+          duration: trackData.duration || 30,
           cover:
-            songData.album?.cover_medium ||
+            trackData.album?.cover_medium ||
             "/placeholder.svg?height=300&width=300",
-          audioUrl: songData.preview || "",
+          audioUrl:
+            trackData.preview ||
+            "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
         };
 
         setSong(formattedSong);
 
         // Get related songs based on artist
-        if (formattedSong.artistId && formattedSong.artistId !== "unknown") {
-          // Try to get top tracks from the artist first
-          let relatedData = await getArtistTopTracks(
-            formattedSong.artistId
-          ).catch(() => []);
+        const relatedData = await searchMusic(formattedSong.artist);
 
-          // If that fails, search by artist name
-          if (!relatedData || relatedData.length === 0) {
-            relatedData = await searchMusic(
-              formattedSong.artist,
-              "track"
-            ).catch(() => []);
-          }
+        const formatted = Array.isArray(relatedData)
+          ? relatedData
+              .filter((s) => s.id !== songId)
+              .slice(0, 6)
+              .map((s) => ({
+                id: s.id || `song-${Math.random()}`,
+                title: s.title || "Unknown Song",
+                artist: s.artist?.name || "Unknown Artist",
+                artistId: s.artist?.id || "unknown",
+                album: s.album?.title || "Unknown Album",
+                albumId: s.album?.id || "unknown",
+                duration: s.duration || 30,
+                cover:
+                  s.album?.cover_medium ||
+                  "/placeholder.svg?height=300&width=300",
+                audioUrl:
+                  s.preview ||
+                  "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
+              }))
+          : [];
 
-          const formatted = Array.isArray(relatedData)
-            ? relatedData
-                .filter((s) => s.id?.toString() !== songId)
-                .slice(0, 6)
-                .map((s) => ({
-                  id: s.id?.toString() || `song-${Math.random()}`,
-                  title: s.title || "Unknown Song",
-                  artist: s.artist?.name || "Unknown Artist",
-                  artistId: s.artist?.id?.toString() || "unknown",
-                  album: s.album?.title || "Unknown Album",
-                  albumId: s.album?.id?.toString() || "unknown",
-                  duration: s.duration || 180,
-                  cover:
-                    s.album?.cover_medium ||
-                    "/placeholder.svg?height=300&width=300",
-                  audioUrl: s.preview || "",
-                }))
-            : [];
+        setRelatedSongs(formatted);
 
-          setRelatedSongs(formatted);
+        // Save to localStorage
+        try {
+          const expiry = new Date().getTime() + 60 * 60 * 1000; // 1 hour
+          localStorage.setItem(
+            storageKey,
+            JSON.stringify({
+              data: {
+                song: formattedSong,
+                relatedSongs: formatted,
+              },
+              expiry,
+            })
+          );
+        } catch (e) {
+          console.error("Error saving song data to localStorage:", e);
         }
       } catch (error) {
         console.error("Error fetching song details:", error);
@@ -111,6 +135,9 @@ export default function SongDetailPage() {
 
     fetchSongDetails();
   }, [songId]);
+
+  const isCurrentSong = currentSong?.id === songId;
+  const isFavorite = song ? favorites.some((s) => s.id === song.id) : false;
 
   const handlePlayPause = () => {
     if (isCurrentSong) {
@@ -185,13 +212,12 @@ export default function SongDetailPage() {
     );
   }
 
-  if (error || !song) {
+  if (!song) {
     return (
       <div className="text-center py-12">
         <h2 className="text-2xl font-bold mb-2">Song not found</h2>
         <p className="text-muted-foreground mb-4">
-          {error ||
-            "The song you're looking for doesn't exist or couldn't be loaded."}
+          The song you're looking for doesn't exist or couldn't be loaded.
         </p>
         <Button asChild>
           <Link href="/">Go Home</Link>
@@ -202,10 +228,16 @@ export default function SongDetailPage() {
 
   return (
     <div className="space-y-8">
+      {error && (
+        <div className="bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800 p-4 rounded-md text-yellow-800 dark:text-yellow-200">
+          {error}
+        </div>
+      )}
+
       <div className="flex flex-col md:flex-row gap-6">
         <div className="relative h-64 w-64 flex-shrink-0">
           <Image
-            src={song.cover || "/placeholder.svg"}
+            src={song.cover || "/placeholder.svg?height=300&width=300"}
             alt={song.title}
             fill
             className="object-cover rounded-md"
@@ -281,15 +313,30 @@ export default function SongDetailPage() {
       </div>
 
       <div className="space-y-4">
-        <h2 className="text-2xl font-bold">Similar Songs</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold">Similar Songs</h2>
+          {relatedSongs.length > 6 && (
+            <Button variant="ghost" size="sm" asChild>
+              <Link href={`/artist/${song.artistId}/songs`}>
+                More <ChevronRight className="ml-1 h-4 w-4" />
+              </Link>
+            </Button>
+          )}
+        </div>
+
         {relatedSongs.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-            {relatedSongs.map((song) => (
+            {relatedSongs.slice(0, 6).map((song) => (
               <SongCard key={song.id} song={song} />
             ))}
           </div>
         ) : (
-          <p className="text-muted-foreground">No related songs found</p>
+          <div className="text-center py-12 border rounded-md">
+            <h3 className="text-lg font-medium mb-2">No similar songs found</h3>
+            <p className="text-muted-foreground mb-4">
+              We couldn't find any similar songs
+            </p>
+          </div>
         )}
       </div>
     </div>

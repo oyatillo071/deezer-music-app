@@ -7,17 +7,16 @@ import {
   getRandomTracks,
   getNewReleases,
   getRandomAlbums,
-  getChartArtists,
-  getRandomArtists,
+  getPopularArtists,
   getTrack,
   getRandomTrack,
   getAlbum,
   getRandomAlbum,
   getArtist,
-  getArtistTopTracks,
-  getRelatedArtists,
+  getArtistTracks,
+  getArtistAlbums,
   searchMusic,
-  getRandomArtist, // Import getRandomArtist
+  getRandomArtist,
 } from "@/lib/music-api";
 import type { Song } from "@/store/player-store";
 
@@ -195,47 +194,43 @@ export function useNewReleases() {
   });
 }
 
-// Custom hook for top artists
-export function useTopArtists() {
+// Custom hook for popular artists
+export function usePopularArtists() {
   const queryClient = useQueryClient();
 
   // Check local storage first
   useEffect(() => {
     const { data, expired } = getFromStorage(STORAGE_KEYS.TOP_ARTISTS);
     if (data && !expired) {
-      queryClient.setQueryData(["topArtists"], data);
+      queryClient.setQueryData(["popularArtists"], data);
     }
   }, [queryClient]);
 
   return useQuery({
-    queryKey: ["topArtists"],
+    queryKey: ["popularArtists"],
     queryFn: async () => {
       try {
-        const artistsData = await getChartArtists();
+        const artistsData = await getPopularArtists();
 
-        const formattedArtists = Array.isArray(artistsData)
-          ? artistsData.slice(0, 6).map(formatArtist)
-          : [];
+        const formattedArtists = artistsData.map((artist: any) => ({
+          id: artist.id,
+          name: artist.name,
+          image: artist.picture_medium,
+        }));
 
         // Save to local storage
         saveToStorage(STORAGE_KEYS.TOP_ARTISTS, formattedArtists, 180); // 3 hours expiry
 
         return formattedArtists;
       } catch (error) {
-        console.error("Error fetching top artists:", error);
+        console.error("Error fetching popular artists:", error);
 
         // Try to get from local storage even if expired
         const { data } = getFromStorage(STORAGE_KEYS.TOP_ARTISTS);
         if (data) return data;
 
-        // Fallback to random artists
-        const randomArtists = await getRandomArtists(6);
-        const formattedArtists = randomArtists.map(formatArtist);
-
-        // Save fallback to local storage
-        saveToStorage(STORAGE_KEYS.TOP_ARTISTS, formattedArtists, 30);
-
-        return formattedArtists;
+        // Return empty array as fallback
+        return [];
       }
     },
     staleTime: 1000 * 60 * 180, // 3 hours
@@ -305,8 +300,12 @@ export function useSearchResults(
           const randomAlbums = await getRandomAlbums(6);
           fallbackData = randomAlbums.map(formatAlbum);
         } else if (type === "artist") {
-          const randomArtists = await getRandomArtists(6);
-          fallbackData = randomArtists.map(formatArtist);
+          const artists = await getPopularArtists();
+          fallbackData = artists.slice(0, 6).map((artist: any) => ({
+            id: artist.id,
+            name: artist.name,
+            image: artist.picture_medium,
+          }));
         }
 
         return fallbackData;
@@ -457,10 +456,14 @@ export function useArtistDetails(artistNameOrId: string) {
     queryFn: async () => {
       try {
         const artistData = await getArtist(artistNameOrId);
-        const topTracksData = await getArtistTopTracks(artistNameOrId);
-        const relatedArtistsData = await getRelatedArtists(artistNameOrId);
 
         if (!artistData) throw new Error("Artist not found");
+
+        // Get artist tracks using the tracklist URL
+        const tracks = await getArtistTracks(artistData);
+
+        // Get artist albums
+        const albums = await getArtistAlbums(artistData.id);
 
         const formattedArtist = {
           id: artistData.id || artistNameOrId,
@@ -470,11 +473,11 @@ export function useArtistDetails(artistNameOrId: string) {
             "/placeholder.svg?height=300&width=300",
           followers: artistData.nb_fan || 10000,
           genres: artistData.genres || ["Pop", "Rock"],
-          topTracks: Array.isArray(topTracksData)
-            ? topTracksData.slice(0, 10).map(formatTrackToSong)
+          topTracks: Array.isArray(tracks)
+            ? tracks.slice(0, 10).map(formatTrackToSong)
             : [],
-          relatedArtists: Array.isArray(relatedArtistsData)
-            ? relatedArtistsData.slice(0, 6).map(formatArtist)
+          albums: Array.isArray(albums)
+            ? albums.slice(0, 6).map(formatAlbum)
             : [],
         };
 
@@ -498,9 +501,9 @@ export function useArtistDetails(artistNameOrId: string) {
             randomArtist.picture_medium ||
             "/placeholder.svg?height=300&width=300",
           followers: randomArtist.nb_fan || 10000,
-          genres: randomArtist.genres || ["Pop", "Rock"],
+          genres: ["Pop", "Rock"],
           topTracks: [],
-          relatedArtists: [],
+          albums: [],
         };
       }
     },

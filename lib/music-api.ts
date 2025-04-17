@@ -46,8 +46,24 @@ export const searchMusic = async (
 ) => {
   try {
     const response = await apiClient.get(`/search`, {
-      params: { q: query, type },
+      params: { q: query },
     });
+
+    // Filter results based on type if needed
+    if (response.data && response.data.data) {
+      if (type === "track") {
+        return response.data.data.filter((item: any) => item.type === "track");
+      } else if (type === "album") {
+        return response.data.data.filter(
+          (item: any) => item.album && item.album.id
+        );
+      } else if (type === "artist") {
+        return response.data.data.filter(
+          (item: any) => item.artist && item.artist.id
+        );
+      }
+    }
+
     return response.data.data || [];
   } catch (error) {
     console.error("Error searching music:", error);
@@ -83,7 +99,7 @@ export const getRandomTrack = async () => {
       return retryResponse.data;
     } catch (retryError) {
       console.error("Error on retry for random track:", retryError);
-      return null;
+      return getMockTracks()[0];
     }
   }
 };
@@ -116,21 +132,40 @@ export const getRandomAlbum = async () => {
       return retryResponse.data;
     } catch (retryError) {
       console.error("Error on retry for random album:", retryError);
-      return null;
+      return getMockAlbums()[0];
     }
   }
 };
 
-// Update the getArtist function to use the artist name instead of ID
+// Get artist details
 export const getArtist = async (artistNameOrId: string) => {
   try {
     // If the input is a name, use it directly, otherwise use the ID
     const endpoint = isNaN(Number(artistNameOrId))
-      ? `/artist/${encodeURIComponent(artistNameOrId)}`
+      ? `/search?q=${encodeURIComponent(artistNameOrId)}`
       : `/artist/${artistNameOrId}`;
 
     const response = await apiClient.get(endpoint);
-    return response.data;
+
+    // If we searched by name, get the first artist from results
+    if (isNaN(Number(artistNameOrId)) && response.data && response.data.data) {
+      const artists = response.data.data.filter(
+        (item: any) =>
+          item.artist &&
+          item.artist.name.toLowerCase().includes(artistNameOrId.toLowerCase())
+      );
+
+      if (artists.length > 0) {
+        // Get the artist details using the ID
+        const artistId = artists[0].artist.id;
+        const artistResponse = await apiClient.get(`/artist/${artistId}`);
+        return artistResponse.data;
+      }
+    } else {
+      return response.data;
+    }
+
+    throw new Error("Artist not found");
   } catch (error) {
     console.error("Error getting artist:", error);
     // If specific artist fails, try to get a random artist
@@ -138,34 +173,54 @@ export const getArtist = async (artistNameOrId: string) => {
   }
 };
 
-// Also update the getArtistTopTracks function to handle artist names
-export const getArtistTopTracks = async (artistNameOrId: string) => {
+// Get artist tracks using the tracklist URL
+export const getArtistTracks = async (artistData: any) => {
   try {
-    // First get the artist to ensure we have the correct ID
-    const artist = await getArtist(artistNameOrId);
-    if (!artist || !artist.id) throw new Error("Artist not found");
+    if (!artistData || !artistData.tracklist) {
+      throw new Error("Artist tracklist URL not found");
+    }
 
-    // Then get the top tracks using the artist ID
-    const response = await apiClient.get(`/artist/${artist.id}`);
+    // Extract the tracklist URL from the artist data
+    const tracklistUrl = artistData.tracklist;
+
+    // Make a direct request to the tracklist URL
+    // We need to extract just the endpoint part from the full URL
+    const tracklistEndpoint = tracklistUrl.replace(
+      "https://api.deezer.com",
+      ""
+    );
+
+    const response = await apiClient.get(tracklistEndpoint);
     return response.data.data || [];
   } catch (error) {
-    console.error("Error getting artist top tracks:", error);
+    console.error("Error getting artist tracks:", error);
     return [];
   }
 };
 
-// Update the getRelatedArtists function similarly
-export const getRelatedArtists = async (artistNameOrId: string) => {
+// Get artist albums
+export const getArtistAlbums = async (artistId: string) => {
   try {
-    // First get the artist to ensure we have the correct ID
-    const artist = await getArtist(artistNameOrId);
-    if (!artist || !artist.id) throw new Error("Artist not found");
+    // Search for albums by this artist
+    const response = await apiClient.get(`/search`, {
+      params: { q: `artist:"${artistId}"`, type: "album" },
+    });
 
-    // Then get related artists using the artist ID
-    const response = await apiClient.get(`/artist/${artist.id}/related`);
-    return response.data.data || [];
+    if (response.data && response.data.data) {
+      // Filter unique albums
+      const uniqueAlbums = new Map();
+      response.data.data.forEach((item: any) => {
+        if (item.album && !uniqueAlbums.has(item.album.id)) {
+          uniqueAlbums.set(item.album.id, item.album);
+        }
+      });
+
+      return Array.from(uniqueAlbums.values());
+    }
+
+    return [];
   } catch (error) {
-    console.error("Error getting related artists:", error);
+    console.error("Error getting artist albums:", error);
     return [];
   }
 };
@@ -244,18 +299,32 @@ export const getNewReleases = async () => {
       popularArtists[Math.floor(Math.random() * popularArtists.length)];
 
     const response = await apiClient.get(`/search`, {
-      params: { q: randomArtist, type: "album" },
+      params: { q: randomArtist },
     });
 
     if (response.data && response.data.data && response.data.data.length > 0) {
-      return response.data.data.slice(0, 6);
+      // Extract unique albums
+      const uniqueAlbums = new Map();
+      response.data.data.forEach((item: any) => {
+        if (item.album && !uniqueAlbums.has(item.album.id)) {
+          uniqueAlbums.set(item.album.id, {
+            id: item.album.id,
+            title: item.album.title,
+            artist: item.artist.name,
+            artistId: item.artist.id,
+            cover: item.album.cover_medium,
+          });
+        }
+      });
+
+      return Array.from(uniqueAlbums.values()).slice(0, 6);
     }
 
-    // If search fails, get random albums
-    return getRandomAlbums(6);
+    // If search fails, get mock albums
+    return getMockAlbums();
   } catch (error) {
     console.error("Error getting new releases:", error);
-    return getRandomAlbums(6);
+    return getMockAlbums();
   }
 };
 
@@ -274,10 +343,17 @@ export const getRandomAlbums = async (count = 6) => {
         console.error(`Error getting random album ${randomId}:`, error);
       }
     }
+
+    if (albums.length < count) {
+      // Fill with mock albums if we couldn't get enough
+      const mockAlbums = getMockAlbums();
+      albums.push(...mockAlbums.slice(0, count - albums.length));
+    }
+
     return albums;
   } catch (error) {
     console.error("Error getting random albums:", error);
-    return [];
+    return getMockAlbums();
   }
 };
 
@@ -305,7 +381,7 @@ export const getRandomTracks = async (count = 6) => {
 
       try {
         const response = await apiClient.get(`/search`, {
-          params: { q: randomTerm, type: "track" },
+          params: { q: randomTerm },
         });
 
         if (
@@ -324,10 +400,16 @@ export const getRandomTracks = async (count = 6) => {
       }
     }
 
+    if (tracks.length < count) {
+      // Fill with mock tracks if we couldn't get enough
+      const mockTracks = getMockTracks();
+      tracks.push(...mockTracks.slice(0, count - tracks.length));
+    }
+
     return tracks;
   } catch (error) {
     console.error("Error getting random tracks:", error);
-    return [];
+    return getMockTracks();
   }
 };
 
@@ -340,7 +422,7 @@ export const getChartTracks = async () => {
       popularSongs[Math.floor(Math.random() * popularSongs.length)];
 
     const response = await apiClient.get(`/search`, {
-      params: { q: randomTerm, type: "track" },
+      params: { q: randomTerm },
     });
 
     if (response.data && response.data.data && response.data.data.length > 0) {
@@ -355,67 +437,113 @@ export const getChartTracks = async () => {
   }
 };
 
-// Get chart albums
-export const getChartAlbums = async () => {
-  try {
-    const response = await apiClient.get("/chart/0/albums");
-    return response.data.data || [];
-  } catch (error) {
-    console.error("Error getting chart albums:", error);
-    return getNewReleases();
-  }
+// Get popular artists (local implementation)
+export const getPopularArtists = async () => {
+  // List of popular artists with their details
+  const popularArtists = [
+    {
+      id: "13",
+      name: "Eminem",
+      picture_small:
+        "https://cdn-images.dzcdn.net/images/artist/19cc38f9d69b352f718782e7a22f9c32/56x56-000000-80-0-0.jpg",
+      picture_medium:
+        "https://cdn-images.dzcdn.net/images/artist/19cc38f9d69b352f718782e7a22f9c32/250x250-000000-80-0-0.jpg",
+      picture_big:
+        "https://cdn-images.dzcdn.net/images/artist/19cc38f9d69b352f718782e7a22f9c32/500x500-000000-80-0-0.jpg",
+      picture_xl:
+        "https://cdn-images.dzcdn.net/images/artist/19cc38f9d69b352f718782e7a22f9c32/1000x1000-000000-80-0-0.jpg",
+      nb_fan: 18156573,
+    },
+    {
+      id: "564",
+      name: "Rihanna",
+      picture_small:
+        "https://cdn-images.dzcdn.net/images/artist/3461e9ba41f8a0e6b9c120e144a1f109/56x56-000000-80-0-0.jpg",
+      picture_medium:
+        "https://cdn-images.dzcdn.net/images/artist/3461e9ba41f8a0e6b9c120e144a1f109/250x250-000000-80-0-0.jpg",
+      picture_big:
+        "https://cdn-images.dzcdn.net/images/artist/3461e9ba41f8a0e6b9c120e144a1f109/500x500-000000-80-0-0.jpg",
+      picture_xl:
+        "https://cdn-images.dzcdn.net/images/artist/3461e9ba41f8a0e6b9c120e144a1f109/1000x1000-000000-80-0-0.jpg",
+      nb_fan: 15000000,
+    },
+    {
+      id: "246791",
+      name: "Drake",
+      picture_small:
+        "https://cdn-images.dzcdn.net/images/artist/5d2fa7f140a6bdc2c864c3465a61fc71/56x56-000000-80-0-0.jpg",
+      picture_medium:
+        "https://cdn-images.dzcdn.net/images/artist/5d2fa7f140a6bdc2c864c3465a61fc71/250x250-000000-80-0-0.jpg",
+      picture_big:
+        "https://cdn-images.dzcdn.net/images/artist/5d2fa7f140a6bdc2c864c3465a61fc71/500x500-000000-80-0-0.jpg",
+      picture_xl:
+        "https://cdn-images.dzcdn.net/images/artist/5d2fa7f140a6bdc2c864c3465a61fc71/1000x1000-000000-80-0-0.jpg",
+      nb_fan: 14000000,
+    },
+    {
+      id: "145",
+      name: "Beyoncé",
+      picture_small:
+        "https://cdn-images.dzcdn.net/images/artist/c87e18302d3e64b7b71d2e90e2a88af0/56x56-000000-80-0-0.jpg",
+      picture_medium:
+        "https://cdn-images.dzcdn.net/images/artist/c87e18302d3e64b7b71d2e90e2a88af0/250x250-000000-80-0-0.jpg",
+      picture_big:
+        "https://cdn-images.dzcdn.net/images/artist/c87e18302d3e64b7b71d2e90e2a88af0/500x500-000000-80-0-0.jpg",
+      picture_xl:
+        "https://cdn-images.dzcdn.net/images/artist/c87e18302d3e64b7b71d2e90e2a88af0/1000x1000-000000-80-0-0.jpg",
+      nb_fan: 13000000,
+    },
+    {
+      id: "4050205",
+      name: "The Weeknd",
+      picture_small:
+        "https://cdn-images.dzcdn.net/images/artist/033c9b5f5a42d5bd21fb8c1a44eea056/56x56-000000-80-0-0.jpg",
+      picture_medium:
+        "https://cdn-images.dzcdn.net/images/artist/033c9b5f5a42d5bd21fb8c1a44eea056/250x250-000000-80-0-0.jpg",
+      picture_big:
+        "https://cdn-images.dzcdn.net/images/artist/033c9b5f5a42d5bd21fb8c1a44eea056/500x500-000000-80-0-0.jpg",
+      picture_xl:
+        "https://cdn-images.dzcdn.net/images/artist/033c9b5f5a42d5bd21fb8c1a44eea056/1000x1000-000000-80-0-0.jpg",
+      nb_fan: 12000000,
+    },
+    {
+      id: "384236",
+      name: "Ed Sheeran",
+      picture_small:
+        "https://cdn-images.dzcdn.net/images/artist/2a03fcb8c262ee280b7d5e90ef5066c8/56x56-000000-80-0-0.jpg",
+      picture_medium:
+        "https://cdn-images.dzcdn.net/images/artist/2a03fcb8c262ee280b7d5e90ef5066c8/250x250-000000-80-0-0.jpg",
+      picture_big:
+        "https://cdn-images.dzcdn.net/images/artist/2a03fcb8c262ee280b7d5e90ef5066c8/500x500-000000-80-0-0.jpg",
+      picture_xl:
+        "https://cdn-images.dzcdn.net/images/artist/2a03fcb8c262ee280b7d5e90ef5066c8/1000x1000-000000-80-0-0.jpg",
+      nb_fan: 11000000,
+    },
+  ];
+
+  return popularArtists;
 };
 
-// Get chart artists - MODIFIED to handle 404 error
-export const getChartArtists = async () => {
+// Get a random artist
+export const getRandomArtist = async () => {
   try {
-    // Try to search for popular artists instead of using chart endpoint
-    const popularArtists = [
-      "eminem",
-      "rihanna",
-      "drake",
-      "beyonce",
-      "taylor swift",
-      "ed sheeran",
-    ];
-    const randomArtist =
-      popularArtists[Math.floor(Math.random() * popularArtists.length)];
-
-    const response = await apiClient.get(`/search`, {
-      params: { q: randomArtist, type: "artist" },
-    });
-
-    if (response.data && response.data.data && response.data.data.length > 0) {
-      return response.data.data;
-    }
-
-    // If search fails, get random artists
-    return getRandomArtists(6);
+    // Generate a random artist ID between 1 and 1000000
+    const randomId = getRandomId(1, 1000000);
+    const response = await apiClient.get(`/artist/${randomId}`);
+    return response.data;
   } catch (error) {
-    console.error("Error getting chart artists:", error);
-    return getRandomArtists(6);
-  }
-};
-
-// Get random artists
-export const getRandomArtists = async (count = 6) => {
-  try {
-    const artists = [];
-    for (let i = 0; i < count; i++) {
-      const randomId = getRandomId(1, 1000000);
-      try {
-        const response = await apiClient.get(`/artist/${randomId}`);
-        if (response.data) {
-          artists.push(response.data);
-        }
-      } catch (error) {
-        console.error(`Error getting random artist ${randomId}:`, error);
-      }
+    console.error("Error getting random artist:", error);
+    // Try another random ID if this one fails
+    const newRandomId = getRandomId(1, 1000000);
+    try {
+      const retryResponse = await apiClient.get(`/artist/${newRandomId}`);
+      return retryResponse.data;
+    } catch (retryError) {
+      console.error("Error on retry for random artist:", retryError);
+      // Return a popular artist as fallback
+      const popularArtists = await getPopularArtists();
+      return popularArtists[Math.floor(Math.random() * popularArtists.length)];
     }
-    return artists;
-  } catch (error) {
-    console.error("Error getting random artists:", error);
-    return [];
   }
 };
 
@@ -537,24 +665,3 @@ function getMockAlbums() {
     },
   ];
 }
-
-// Get a random artist
-export const getRandomArtist = async () => {
-  try {
-    // Generate a random artist ID between 1 and 1000000
-    const randomId = getRandomId(1, 1000000);
-    const response = await apiClient.get(`/artist/${randomId}`);
-    return response.data;
-  } catch (error) {
-    console.error("Error getting random artist:", error);
-    // Try another random ID if this one fails
-    const newRandomId = getRandomId(1, 1000000);
-    try {
-      const retryResponse = await apiClient.get(`/artist/${newRandomId}`);
-      return retryResponse.data;
-    } catch (retryError) {
-      console.error("Error on retry for random artist:", retryError);
-      return null;
-    }
-  }
-};
