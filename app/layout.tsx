@@ -13,7 +13,6 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "MusicStream - Your Music Streaming App",
   description: "A modern music streaming application",
-  generator: "v0.dev",
 };
 
 export default function RootLayout({
@@ -33,10 +32,12 @@ export default function RootLayout({
           <ApiKeyModal />
           <div className="relative min-h-screen">
             <Header />
-            <div className="flex gap-4">
+            <div className="flex">
               <Sidebar />
-              <main className="flex-1 md:ml-60 p-4">
-                <div className="container py-6 md:py-8">{children}</div>
+              <main className="flex-1 md:ml-64">
+                <div className="container py-6 md:py-8 px-2 md:px-4">
+                  {children}
+                </div>
               </main>
             </div>
             <div className="pb-24">{/* Space for the music player */}</div>

@@ -3,7 +3,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { SearchBar } from "@/components/search-bar";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { LanguageSwitcher } from "@/components/language-switcher";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -12,9 +11,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useUserStore } from "@/store/user-store";
 import { getInitials } from "@/lib/utils";
 import { Music, User, Settings, LogOut } from "lucide-react";
+import { useUserStore } from "@/store/user-store";
 
 export function Header() {
   const { username, profilePicture } = useUserStore();
@@ -24,27 +23,27 @@ export function Header() {
       <div className="container flex h-16 items-center justify-between">
         <div className="flex items-center gap-2 md:gap-4">
           <Link href="/" className="flex items-center gap-2">
-            <Music className="h-6 w-6" />
-            <span className="font-bold hidden md:inline-block">
+            <Music className="h-6 w-6 text-ocean-dark" />
+            <span className="font-bold hidden md:inline-block text-ocean-darkest">
               MusicStream
             </span>
           </Link>
           <nav className="hidden md:flex items-center gap-6 text-sm">
             <Link
               href="/"
-              className="transition-colors hover:text-foreground/80 text-foreground/60"
+              className="transition-colors hover:text-ocean-dark text-ocean-darkest font-medium"
             >
               Home
             </Link>
             <Link
               href="/search"
-              className="transition-colors hover:text-foreground/80 text-foreground/60"
+              className="transition-colors hover:text-ocean-dark text-ocean-darkest/80"
             >
               Browse
             </Link>
             <Link
               href="/library"
-              className="transition-colors hover:text-foreground/80 text-foreground/60"
+              className="transition-colors hover:text-ocean-dark text-ocean-darkest/80"
             >
               Library
             </Link>
@@ -53,18 +52,19 @@ export function Header() {
 
         <div className="flex items-center gap-2">
           <SearchBar />
-          <LanguageSwitcher />
           <ThemeToggle />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="rounded-full">
-                <Avatar className="h-8 w-8">
+                <Avatar className="h-8 w-8 border-2 border-ocean-medium">
                   <AvatarImage
                     src={profilePicture || undefined}
                     alt={username}
                   />
-                  <AvatarFallback>{getInitials(username)}</AvatarFallback>
+                  <AvatarFallback className="bg-ocean-dark text-white">
+                    {getInitials(username)}
+                  </AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>

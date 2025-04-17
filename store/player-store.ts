@@ -97,6 +97,17 @@ export const usePlayerStore = create<PlayerState>()(
               currentSong: nextSong,
               history: shuffle ? history : [nextSong, ...history.filter((s) => s.id !== nextSong.id)],
             })
+          } else if (repeat === "one" && currentSong) {
+            // If repeat one is on, just restart the current song
+            // This is handled in the audio element's 'ended' event
+          } else if (currentSong && history.length > 0) {
+            // If we're at the end of the queue, cycle back to the first song in history
+            const nextSong = history[history.length - 1]
+            set({
+              currentSong: nextSong,
+              history: history.filter((s) => s.id !== nextSong.id),
+              queue: [...get().queue, nextSong],
+            })
           }
           return
         }
@@ -116,9 +127,20 @@ export const usePlayerStore = create<PlayerState>()(
       },
 
       previousSong: () => {
-        const { history, currentSong } = get()
+        const { history, currentSong, queue } = get()
 
-        if (history.length === 0) return
+        if (history.length === 0) {
+          // If no history, cycle to the last song in the queue
+          if (queue.length > 0 && currentSong) {
+            const lastSong = queue[queue.length - 1]
+            set({
+              currentSong: lastSong,
+              queue: queue.filter((s) => s.id !== lastSong.id),
+              history: [currentSong, ...get().history],
+            })
+          }
+          return
+        }
 
         const prevSong = history[0]
 
