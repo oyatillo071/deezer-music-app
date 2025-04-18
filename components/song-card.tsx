@@ -23,6 +23,7 @@ interface SongCardProps {
 
 export function SongCard({ song, variant = "default" }: SongCardProps) {
   const router = useRouter();
+
   const {
     currentSong,
     isPlaying,
@@ -39,7 +40,8 @@ export function SongCard({ song, variant = "default" }: SongCardProps) {
   const isFavorite = favorites.some((s) => s.id === song.id);
 
   const handlePlay = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent navigation when clicking play button
+    e.stopPropagation();
+
     if (isActive) {
       togglePlay();
     } else {
@@ -52,7 +54,7 @@ export function SongCard({ song, variant = "default" }: SongCardProps) {
   };
 
   const handleArtistClick = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent card navigation
+    e.stopPropagation();
     router.push(`/artist/${song.artistId}`);
   };
 
@@ -86,9 +88,11 @@ export function SongCard({ song, variant = "default" }: SongCardProps) {
         </div>
 
         <div className="flex-1 min-w-0 overflow-hidden">
-          <div className="font-medium truncate">{song.title}</div>
+          <div className="text-sm font-medium hover:underline truncate block">
+            {song.title}
+          </div>
           <div
-            className="text-xs text-muted-foreground hover:underline truncate block"
+            className="text-xs text-muted-foreground hover:underline truncate block cursor-pointer"
             onClick={handleArtistClick}
           >
             {song.artist}
@@ -105,7 +109,7 @@ export function SongCard({ song, variant = "default" }: SongCardProps) {
               variant="ghost"
               size="icon"
               className="h-8 w-8 text-ocean-dark dark:text-ocean-light flex-shrink-0"
-              onClick={(e) => e.stopPropagation()} // Prevent card navigation
+              onClick={(e) => e.stopPropagation()} // Prevent card click when dropdown is clicked
             >
               <MoreHorizontal className="h-4 w-4" />
             </Button>
@@ -168,7 +172,7 @@ export function SongCard({ song, variant = "default" }: SongCardProps) {
             {song.title}
           </div>
           <div
-            className="text-xs text-muted-foreground hover:underline truncate block"
+            className="text-xs text-muted-foreground hover:underline truncate block cursor-pointer"
             onClick={handleArtistClick}
           >
             {song.artist}
@@ -228,7 +232,7 @@ export function SongCard({ song, variant = "default" }: SongCardProps) {
             {song.title}
           </div>
           <div
-            className="text-sm text-muted-foreground hover:underline truncate block mt-1"
+            className="text-sm text-muted-foreground hover:underline truncate block mt-1 cursor-pointer"
             onClick={handleArtistClick}
           >
             {song.artist}

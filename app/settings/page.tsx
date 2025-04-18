@@ -25,7 +25,7 @@ import {
   Shield,
   Bell,
 } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/alert";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "@/components/ui/use-toast";
 

@@ -11,6 +11,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { getTrack, searchMusic } from "@/lib/music-api";
+import { toast } from "sonner";
 
 export default function SongDetailPage() {
   const params = useParams();
@@ -53,7 +54,7 @@ export default function SongDetailPage() {
               return;
             }
           } catch (e) {
-            console.error("Error parsing stored song data:", e);
+            toast.error("Error parsing stored song data:", e);
           }
         }
 
@@ -123,10 +124,10 @@ export default function SongDetailPage() {
             })
           );
         } catch (e) {
-          console.error("Error saving song data to localStorage:", e);
+          toast.error("Error saving song data to localStorage:", e);
         }
       } catch (error) {
-        console.error("Error fetching song details:", error);
+        toast.error("Error fetching song details:", error);
         setError("Failed to load song data. Please try again later.");
       } finally {
         setLoading(false);
@@ -167,12 +168,12 @@ export default function SongDetailPage() {
           text: `Listen to ${song?.title} by ${song?.artist}`,
           url: window.location.href,
         })
-        .catch(console.error);
+        .catch(toast.error);
     } else {
       navigator.clipboard
         .writeText(window.location.href)
         .then(() => alert("Link copied to clipboard!"))
-        .catch(console.error);
+        .catch(toast.error);
     }
   };
 
@@ -238,7 +239,7 @@ export default function SongDetailPage() {
         <div className="relative h-64 w-64 flex-shrink-0">
           <Image
             src={song.cover || "/placeholder.svg?height=300&width=300"}
-            alt={song.title}
+            alt={song.title || "default music icon"}
             fill
             className="object-cover rounded-md"
           />

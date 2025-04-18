@@ -19,6 +19,7 @@ import {
   getRandomArtist,
 } from "@/lib/music-api";
 import type { Song } from "@/store/player-store";
+import { toast } from "sonner";
 
 // Local storage keys
 const STORAGE_KEYS = {
@@ -50,7 +51,7 @@ const getFromStorage = <T>(
 
     return { data, expired: false };
   } catch (error) {
-    console.error(`Error retrieving ${key} from localStorage:`, error);
+    toast.error(`Error retrieving ${key} from localStorage:`, error);
     return { data: null, expired: true };
   }
 };
@@ -63,7 +64,7 @@ const saveToStorage = <T>(key: string, data: T, expiryMinutes = 60) => {
     const expiry = new Date().getTime() + expiryMinutes * 60 * 1000;
     localStorage.setItem(key, JSON.stringify({ data, expiry }));
   } catch (error) {
-    console.error(`Error saving ${key} to localStorage:`, error);
+    toast.error(`Error saving ${key} to localStorage:`, error);
   }
 };
 
@@ -127,7 +128,7 @@ export function useFeaturedSongs() {
 
         return formattedSongs;
       } catch (error) {
-        console.error("Error fetching featured songs:", error);
+        toast.error("Error fetching featured songs:", error);
 
         // Try to get from local storage even if expired
         const { data } = getFromStorage<Song[]>(STORAGE_KEYS.FEATURED_SONGS);
@@ -174,7 +175,7 @@ export function useNewReleases() {
 
         return formattedAlbums;
       } catch (error) {
-        console.error("Error fetching new releases:", error);
+        toast.error("Error fetching new releases:", error);
 
         // Try to get from local storage even if expired
         const { data } = getFromStorage(STORAGE_KEYS.NEW_RELEASES);
@@ -223,7 +224,7 @@ export function usePopularArtists() {
 
         return formattedArtists;
       } catch (error) {
-        console.error("Error fetching popular artists:", error);
+        toast.error("Error fetching popular artists:", error);
 
         // Try to get from local storage even if expired
         const { data } = getFromStorage(STORAGE_KEYS.TOP_ARTISTS);
@@ -284,7 +285,7 @@ export function useSearchResults(
 
         return formattedData;
       } catch (error) {
-        console.error(`Error searching for ${type}:`, error);
+        toast.error(`Error searching for ${type}:`, error);
 
         // Try to get from local storage even if expired
         const { data } = getFromStorage(storageKey);
@@ -344,7 +345,7 @@ export function useTrackDetails(trackId: string) {
 
         return formattedTrack;
       } catch (error) {
-        console.error("Error fetching track details:", error);
+        toast.error("Error fetching track details:", error);
 
         // Try to get from local storage even if expired
         const { data } = getFromStorage(storageKey);
@@ -413,7 +414,7 @@ export function useAlbumDetails(albumId: string) {
 
         return formattedAlbum;
       } catch (error) {
-        console.error("Error fetching album details:", error);
+        toast.error("Error fetching album details:", error);
 
         // Try to get from local storage even if expired
         const { data } = getFromStorage(storageKey);
@@ -486,7 +487,7 @@ export function useArtistDetails(artistNameOrId: string) {
 
         return formattedArtist;
       } catch (error) {
-        console.error("Error fetching artist details:", error);
+        toast.error("Error fetching artist details:", error);
 
         // Try to get from local storage even if expired
         const { data } = getFromStorage(storageKey);
@@ -519,7 +520,7 @@ export function useRandomTrack() {
         const randomTrack = await getRandomTrack();
         return formatTrackToSong(randomTrack);
       } catch (error) {
-        console.error("Error getting random track:", error);
+        toast.error("Error getting random track:", error);
         throw error;
       }
     },

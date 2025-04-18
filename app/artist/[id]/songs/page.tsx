@@ -43,7 +43,7 @@ export default function ArtistSongsPage() {
               return;
             }
           } catch (e) {
-            console.error("Error parsing stored artist data:", e);
+            toast.error("Error parsing stored artist data:", e);
           }
         }
 
@@ -88,7 +88,7 @@ export default function ArtistSongsPage() {
         setArtist(formattedArtist);
         setSongs(formattedSongs);
       } catch (error) {
-        console.error("Error fetching artist songs:", error);
+        toast.error("Error fetching artist songs:", error);
         setError("Failed to load artist songs. Please try again later.");
       } finally {
         setLoading(false);

@@ -1,4 +1,5 @@
 import axios from "axios";
+import { toast } from "sonner";
 
 // Base URL for the API
 const API_BASE_URL =
@@ -27,7 +28,7 @@ apiClient.interceptors.request.use((config) => {
   if (apiKey) {
     config.headers["x-rapidapi-key"] = apiKey;
   } else {
-    console.warn(
+    toast.error(
       "API key is missing. Requests will likely fail with 401 errors."
     );
   }
@@ -66,7 +67,7 @@ export const searchMusic = async (
 
     return response.data.data || [];
   } catch (error) {
-    console.error("Error searching music:", error);
+    toast.error("Error searching music:", error);
     return [];
   }
 };
@@ -77,7 +78,7 @@ export const getTrack = async (id: string) => {
     const response = await apiClient.get(`/track/${id}`);
     return response.data;
   } catch (error) {
-    console.error("Error getting track:", error);
+    toast.error("Error getting track:", error);
     // If specific track fails, try to get a random track
     return getRandomTrack();
   }
@@ -91,14 +92,14 @@ export const getRandomTrack = async () => {
     const response = await apiClient.get(`/track/${randomId}`);
     return response.data;
   } catch (error) {
-    console.error("Error getting random track:", error);
+    toast.error("Error getting random track:", error);
     // Try another random ID if this one fails
     const newRandomId = getRandomId(1, 10000000);
     try {
       const retryResponse = await apiClient.get(`/track/${newRandomId}`);
       return retryResponse.data;
     } catch (retryError) {
-      console.error("Error on retry for random track:", retryError);
+      toast.error("Error on retry for random track:", retryError);
       return getMockTracks()[0];
     }
   }
@@ -110,7 +111,7 @@ export const getAlbum = async (id: string) => {
     const response = await apiClient.get(`/album/${id}`);
     return response.data;
   } catch (error) {
-    console.error("Error getting album:", error);
+    toast.error("Error getting album:", error);
     // If specific album fails, try to get a random album
     return getRandomAlbum();
   }
@@ -124,14 +125,14 @@ export const getRandomAlbum = async () => {
     const response = await apiClient.get(`/album/${randomId}`);
     return response.data;
   } catch (error) {
-    console.error("Error getting random album:", error);
+    toast.error("Error getting random album:", error);
     // Try another random ID if this one fails
     const newRandomId = getRandomId(1, 1000000);
     try {
       const retryResponse = await apiClient.get(`/album/${newRandomId}`);
       return retryResponse.data;
     } catch (retryError) {
-      console.error("Error on retry for random album:", retryError);
+      toast.error("Error on retry for random album:", retryError);
       return getMockAlbums()[0];
     }
   }
@@ -167,7 +168,7 @@ export const getArtist = async (artistNameOrId: string) => {
 
     throw new Error("Artist not found");
   } catch (error) {
-    console.error("Error getting artist:", error);
+    toast.error("Error getting artist:", error);
     // If specific artist fails, try to get a random artist
     return getRandomArtist();
   }
@@ -193,7 +194,7 @@ export const getArtistTracks = async (artistData: any) => {
     const response = await apiClient.get(tracklistEndpoint);
     return response.data.data || [];
   } catch (error) {
-    console.error("Error getting artist tracks:", error);
+    toast.error("Error getting artist tracks:", error);
     return [];
   }
 };
@@ -220,7 +221,7 @@ export const getArtistAlbums = async (artistId: string) => {
 
     return [];
   } catch (error) {
-    console.error("Error getting artist albums:", error);
+    toast.error("Error getting artist albums:", error);
     return [];
   }
 };
@@ -231,7 +232,7 @@ export const getPlaylist = async (id: string) => {
     const response = await apiClient.get(`/playlist/${id}`);
     return response.data;
   } catch (error) {
-    console.error("Error getting playlist:", error);
+    toast.error("Error getting playlist:", error);
     // If specific playlist fails, try to get a random playlist
     return getRandomPlaylist();
   }
@@ -246,14 +247,14 @@ export const getRandomPlaylist = async () => {
     const response = await apiClient.get(`/playlist/${randomId}`);
     return response.data;
   } catch (error) {
-    console.error("Error getting random playlist:", error);
+    toast.error("Error getting random playlist:", error);
     // Try another random ID if this one fails
     const newRandomId = getRandomId(1, 10000);
     try {
       const retryResponse = await apiClient.get(`/playlist/${newRandomId}`);
       return retryResponse.data;
     } catch (retryError) {
-      console.error("Error on retry for random playlist:", retryError);
+      toast.error("Error on retry for random playlist:", retryError);
       return null;
     }
   }
@@ -273,12 +274,12 @@ export const getFeaturedPlaylists = async () => {
           playlists.push(response.data);
         }
       } catch (error) {
-        console.error(`Error getting random playlist ${randomId}:`, error);
+        toast.error(`Error getting random playlist ${randomId}:`, error);
       }
     }
     return playlists;
   } catch (error) {
-    console.error("Error getting featured playlists:", error);
+    toast.error("Error getting featured playlists:", error);
     return [];
   }
 };
@@ -323,7 +324,7 @@ export const getNewReleases = async () => {
     // If search fails, get mock albums
     return getMockAlbums();
   } catch (error) {
-    console.error("Error getting new releases:", error);
+    toast.error("Error getting new releases:", error);
     return getMockAlbums();
   }
 };
@@ -340,7 +341,7 @@ export const getRandomAlbums = async (count = 6) => {
           albums.push(response.data);
         }
       } catch (error) {
-        console.error(`Error getting random album ${randomId}:`, error);
+        toast.error(`Error getting random album ${randomId}:`, error);
       }
     }
 
@@ -352,7 +353,7 @@ export const getRandomAlbums = async (count = 6) => {
 
     return albums;
   } catch (error) {
-    console.error("Error getting random albums:", error);
+    toast.error("Error getting random albums:", error);
     return getMockAlbums();
   }
 };
@@ -369,7 +370,7 @@ export const getRandomTracks = async (count = 6) => {
           tracks.push(response.data);
         }
       } catch (error) {
-        console.error(`Error getting random track ${randomId}:`, error);
+        toast.error(`Error getting random track ${randomId}:`, error);
       }
     }
 
@@ -396,7 +397,7 @@ export const getRandomTracks = async (count = 6) => {
           tracks.push(...searchTracks);
         }
       } catch (searchError) {
-        console.error("Error searching for tracks:", searchError);
+        toast.error("Error searching for tracks:", searchError);
       }
     }
 
@@ -408,7 +409,7 @@ export const getRandomTracks = async (count = 6) => {
 
     return tracks;
   } catch (error) {
-    console.error("Error getting random tracks:", error);
+    toast.error("Error getting random tracks:", error);
     return getMockTracks();
   }
 };
@@ -432,7 +433,7 @@ export const getChartTracks = async () => {
     // If search fails, fall back to random tracks
     return getRandomTracks(10);
   } catch (error) {
-    console.error("Error getting chart tracks:", error);
+    toast.error("Error getting chart tracks:", error);
     return getRandomTracks(10);
   }
 };
@@ -532,14 +533,14 @@ export const getRandomArtist = async () => {
     const response = await apiClient.get(`/artist/${randomId}`);
     return response.data;
   } catch (error) {
-    console.error("Error getting random artist:", error);
+    toast.error("Error getting random artist:", error);
     // Try another random ID if this one fails
     const newRandomId = getRandomId(1, 1000000);
     try {
       const retryResponse = await apiClient.get(`/artist/${newRandomId}`);
       return retryResponse.data;
     } catch (retryError) {
-      console.error("Error on retry for random artist:", retryError);
+      toast.error("Error on retry for random artist:", retryError);
       // Return a popular artist as fallback
       const popularArtists = await getPopularArtists();
       return popularArtists[Math.floor(Math.random() * popularArtists.length)];

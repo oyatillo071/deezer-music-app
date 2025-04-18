@@ -8,6 +8,7 @@ import { MusicPlayer } from "@/components/music-player";
 import { ApiKeyModal } from "@/components/api-key-modal";
 import { Providers } from "./provider";
 import { WelcomeLoader } from "@/components/welcome-loader";
+import { Toaster } from "sonner";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -26,6 +27,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <Providers>
           <WelcomeLoader />
+          <Toaster />
           <ApiKeyModal />
           <div className="relative min-h-screen">
             <Header />

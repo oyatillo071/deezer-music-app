@@ -54,7 +54,7 @@ export function MusicPlayer() {
 
     if (isPlaying) {
       audioRef.current.play().catch((error) => {
-        console.error("Error playing audio:", error);
+        toast.error("Error playing audio:", error);
         setIsPlaying(false);
       });
     } else {
@@ -85,7 +85,7 @@ export function MusicPlayer() {
     const handleEnded = () => {
       if (repeat === "one") {
         audio.currentTime = 0;
-        audio.play().catch(console.error);
+        audio.play().catch(toast.error);
       } else {
         nextSong();
       }

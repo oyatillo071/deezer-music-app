@@ -94,7 +94,7 @@ export default function SearchPage() {
         }
         setArtists(Array.from(uniqueArtists.values()).slice(0, 12));
       } catch (error) {
-        console.error("Error searching:", error);
+        toast.error("Error searching:", error);
         setError("There was an error with your search. Please try again.");
       } finally {
         setLoading(false);

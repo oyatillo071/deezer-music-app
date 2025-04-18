@@ -66,7 +66,7 @@ export default function AlbumsPage() {
 
         setAlbums(formattedAlbums);
       } catch (error) {
-        console.error("Error fetching albums:", error);
+        toast.error("Error fetching albums:", error);
 
         // Fallback to random albums
         try {
@@ -83,7 +83,7 @@ export default function AlbumsPage() {
             setAlbums(formattedAlbums);
           }
         } catch (fallbackError) {
-          console.error("Error fetching fallback albums:", fallbackError);
+          toast.error("Error fetching fallback albums:", fallbackError);
         }
       } finally {
         setLoading(false);

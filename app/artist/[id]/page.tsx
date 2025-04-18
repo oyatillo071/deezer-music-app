@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { SongCard } from "@/components/song-card";
 import { AlbumCard } from "@/components/album-card";
@@ -12,22 +12,51 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getArtist, getArtistTracks, getArtistAlbums } from "@/lib/music-api";
+import { toast } from "sonner";
+
+interface Artist {
+  id: string;
+  name: string;
+  image: string;
+  followers: number;
+}
+
+interface Song {
+  id: string;
+  title: string;
+  artist: string;
+  artistId: string;
+  album: string;
+  albumId: string;
+  duration: number;
+  cover: string;
+  audioUrl: string;
+}
+
+interface Album {
+  id: string;
+  title: string;
+  artist: string;
+  artistId: string;
+  cover: string;
+}
 
 export default function ArtistPage() {
   const params = useParams();
+  const router = useRouter();
   const artistId = params.id as string;
 
   const { currentSong, isPlaying, setCurrentSong, togglePlay } =
     usePlayerStore();
 
-  const [artist, setArtist] = useState<any>(null);
-  const [topSongs, setTopSongs] = useState<any[]>([]);
-  const [albums, setAlbums] = useState<any[]>([]);
+  const [artist, setArtist] = useState<Artist | null>(null);
+  const [topSongs, setTopSongs] = useState<Song[]>([]);
+  const [albums, setAlbums] = useState<Album[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchArtistDetails = async () => {
+    const fetchArtistData = async () => {
       try {
         setLoading(true);
         setError(null);
@@ -49,7 +78,7 @@ export default function ArtistPage() {
               return;
             }
           } catch (e) {
-            console.error("Error parsing stored artist data:", e);
+            toast.error("Error parsing stored artist data:", e);
           }
         }
 
@@ -111,7 +140,7 @@ export default function ArtistPage() {
 
         // Save to localStorage
         try {
-          const expiry = new Date().getTime() + 60 * 60 * 1000; // 1 hour
+          const expiry = new Date().getTime() + 24 * 60 * 60 * 1000; // 24 hours
           localStorage.setItem(
             storageKey,
             JSON.stringify({
@@ -124,17 +153,17 @@ export default function ArtistPage() {
             })
           );
         } catch (e) {
-          console.error("Error saving artist data to localStorage:", e);
+          toast.error("Error saving artist data to localStorage:", e);
         }
       } catch (error) {
-        console.error("Error fetching artist details:", error);
+        toast.error("Error fetching artist data:", error);
         setError("Failed to load artist data. Please try again later.");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchArtistDetails();
+    fetchArtistData();
   }, [artistId]);
 
   const handlePlayPause = () => {
@@ -150,6 +179,14 @@ export default function ArtistPage() {
     } else {
       setCurrentSong(topSongs[0]);
     }
+  };
+
+  const navigateToSongs = () => {
+    router.push(`/artist/${artistId}/songs`);
+  };
+
+  const navigateToAlbums = () => {
+    router.push(`/artist/${artistId}/albums`);
   };
 
   if (loading) {
@@ -253,10 +290,8 @@ export default function ArtistPage() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold">Popular Songs</h2>
             {topSongs.length > 5 && (
-              <Button variant="ghost" size="sm" asChild>
-                <Link href={`/artist/${artistId}/songs`}>
-                  More <ChevronRight className="ml-1 h-4 w-4" />
-                </Link>
+              <Button variant="outline" size="sm" onClick={navigateToSongs}>
+                More <ChevronRight className="ml-1 h-4 w-4" />
               </Button>
             )}
           </div>
@@ -286,9 +321,13 @@ export default function ArtistPage() {
               ))}
             </div>
           ) : (
-            <p className="text-muted-foreground">
-              No songs available for this artist.
-            </p>
+            <div className="text-center py-12 border rounded-md">
+              <Music className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium mb-2">No songs available</h3>
+              <p className="text-muted-foreground mb-4">
+                We couldn't find any songs for this artist
+              </p>
+            </div>
           )}
         </TabsContent>
 
@@ -296,10 +335,8 @@ export default function ArtistPage() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-2xl font-bold">Albums</h2>
             {albums.length > 4 && (
-              <Button variant="ghost" size="sm" asChild>
-                <Link href={`/artist/${artistId}/albums`}>
-                  More <ChevronRight className="ml-1 h-4 w-4" />
-                </Link>
+              <Button variant="outline" size="sm" onClick={navigateToAlbums}>
+                More <ChevronRight className="ml-1 h-4 w-4" />
               </Button>
             )}
           </div>

@@ -67,7 +67,7 @@ export default function AlbumPage() {
 
         setAlbum(formattedAlbum);
       } catch (error) {
-        console.error("Error fetching album details:", error);
+        toast.error("Error fetching album details:", error);
         setError(
           "Failed to load album details. Trying to get a random album..."
         );
@@ -115,7 +115,7 @@ export default function AlbumPage() {
             setError("Could not load any album. Please try again later.");
           }
         } catch (fallbackError) {
-          console.error("Error fetching random album:", fallbackError);
+          toast.error("Error fetching random album:", fallbackError);
           setError("Could not load any album. Please try again later.");
         }
       } finally {

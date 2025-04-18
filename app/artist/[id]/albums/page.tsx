@@ -40,7 +40,7 @@ export default function ArtistAlbumsPage() {
               return;
             }
           } catch (e) {
-            console.error("Error parsing stored artist data:", e);
+            toast.error("Error parsing stored artist data:", e);
           }
         }
 
@@ -78,7 +78,7 @@ export default function ArtistAlbumsPage() {
         setArtist(formattedArtist);
         setAlbums(formattedAlbums);
       } catch (error) {
-        console.error("Error fetching artist albums:", error);
+        toast.error("Error fetching artist albums:", error);
         setError("Failed to load artist albums. Please try again later.");
       } finally {
         setLoading(false);

@@ -103,7 +103,7 @@ export default function Home() {
           });
         }
       } catch (error) {
-        console.error("Error fetching home data:", error);
+        toast.error("Error fetching home data:", error);
       } finally {
         setLoading(false);
       }
@@ -141,7 +141,7 @@ export default function Home() {
         setCurrentSong(featuredSongs[randomIndex]);
       }
     } catch (error) {
-      console.error("Error playing random song:", error);
+      toast.error("Error playing random song:", error);
 
       // Fallback to featured songs if there's an error
       if (featuredSongs.length > 0) {

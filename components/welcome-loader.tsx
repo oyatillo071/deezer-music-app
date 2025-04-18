@@ -12,18 +12,15 @@ export function WelcomeLoader() {
   const welcomeText = `Hello, ${username}!`;
 
   useEffect(() => {
-    // Start typing after a short delay
-    const startTimer = setTimeout(() => {
-      setStartTyping(true);
-    }, 100);
+    // Start typing immediately
+    setStartTyping(true);
 
     // Show loader for at least 2 seconds
     const hideTimer = setTimeout(() => {
       setLoading(false);
-    }, 2500);
+    }, 2000);
 
     return () => {
-      clearTimeout(startTimer);
       clearTimeout(hideTimer);
     };
   }, []);
@@ -39,7 +36,7 @@ export function WelcomeLoader() {
         } else {
           clearInterval(typeInterval);
         }
-      }, 100);
+      }, 80);
 
       return () => clearInterval(typeInterval);
     }
